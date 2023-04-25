@@ -20,6 +20,8 @@ def get_sufix(url, domain):
 def create_html(url):
     grab.URLToRenderedHTML(url)
 
+    if not os.path.exists("pages"):
+        os.mkdir("pages")
     path = "./pages/page.html"
     grab.SaveTo(path)
 
