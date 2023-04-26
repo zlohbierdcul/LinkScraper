@@ -73,6 +73,7 @@ def create_links(sufix):
 if __name__ == "__main__":
     url = input("Please enter the url: ")
     # url = URL
+    start = time.perf_counter()
     domain_name = urlparse(url).netloc
 
     print(get_sufix(url=url, domain=domain_name))
@@ -82,3 +83,5 @@ if __name__ == "__main__":
         os.remove("pages/page.html")
     except Exception:
         print("file not found")
+    end = time.perf_counter()
+    print(f"Total Time: {end - start:0.4f} seconds")
