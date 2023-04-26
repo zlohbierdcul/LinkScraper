@@ -3,42 +3,70 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import os
 import json
-import time
-
-URL = "https://9animetv.to/watch/one-piece-100?ep=2714"
 
 grab = GrabzItClient.GrabzItClient(
     "MzM0MzQ0MWU2ZWM4NDkwN2IyYjJjYjcwZTE4NGQ5ZGU=", "Kj8hPz8/fQEhRj8/P1lpP3duVD8/HnE/T2s/Pz90CEo=")
 
 
-def get_sufix(url, domain):
-    url_string = str(url)
-    parsed = url_string.replace("https://" + domain + "/watch/", "")
-    index = parsed.index("?")
-    return parsed[:index]
+def create_json(dict, file_name):
+    with open(f"{file_name}.json", "w") as data:
+        json.dump(dict, data)
 
 
-def create_html(url):
-    start = time.perf_counter()
-    print("Currently creating the rendered HTML.\nThis this can take a few seconds!")
+def get_soup(path):
+    with open(f'./pages/{path}.html', 'rb') as page:
+        contents = page.read()
+        soup = BeautifulSoup(contents, "html.parser")
+    return soup
+
+
+def get_link_from_json(selection, file_name):
+    with open(f"{file_name}.json") as json_file:
+        data = json.load(json_file)
+    return data[selection]["URL"]
+
+
+def create_html(url, name):
+    # print("Currently creating the rendered HTML.\nThis this can take a few seconds!")
     grab.URLToRenderedHTML(url)
 
     if not os.path.exists("pages"):
         os.mkdir("pages")
-    path = "./pages/page.html"
+    path = f"./pages/{name}.html"
     grab.SaveTo(path)
-    end = time.perf_counter()
-    print("Finished rendering the HTML")
-    print(f"It took: {end - start:0.4f} seconds")
+    # print("Finished rendering the HTML")
 
 
-def create_json(dict):
-    with open("links.json", "w") as data:
-        json.dump(dict, data)
+def find_shows(show_name, path):
+    # print("Currently finding all Episodes!")
+    with open(f'./pages/{path}.html', 'rb') as page:
+        contents = page.read()
+        soup = BeautifulSoup(contents, "html.parser")
+
+    search_results = {}
+    items = soup.find_all("a", class_="dynamic-name")
+
+    show_count = 0
+    for episode_item in items:
+
+        url = "zoro.to" + str(episode_item.get("href"))
+        title = episode_item.get("title")
+
+        if show_name.lower().replace(" ", "") in title.lower().replace(" ", ""):
+            show_count += 1
+            search_results[show_count] = {
+                "Title": title,
+                "URL": url
+            }
+    try:
+        os.remove(f"pages/{path}.html")
+    except Exception:
+        print("file not found")
+    return search_results
 
 
-def create_links(sufix):
-    print("Currently finding all Episodes!")
+def find_links():
+    # print("Currently finding all Episodes!")
     with open('./pages/page.html', 'rb') as page:
         contents = page.read()
         soup = BeautifulSoup(contents, "html.parser")
@@ -49,7 +77,7 @@ def create_links(sufix):
     filler_count = 0
 
     for episode_item in items:
-        url = domain_name + str(episode_item.get("href"))
+        url = "zoro.to" + str(episode_item.get("href"))
         episode = episode_item.get("data-number")
         title = episode_item.get("title")
         filler = False
@@ -67,21 +95,47 @@ def create_links(sufix):
     print("Total Episodes: ", total_episodes)
     print("Filler Episodes: ", filler_count)
     print("Non Filler Episodes: ", total_episodes - filler_count)
+    try:
+        os.remove(f"pages/page.html")
+    except Exception:
+        print("file not found")
     return links
 
 
-if __name__ == "__main__":
-    url = input("Please enter the url: ")
-    # url = URL
-    start = time.perf_counter()
-    domain_name = urlparse(url).netloc
+def print_results(file_name):
+    with open(f"{file_name}.json") as json_file:
+        data = json.load(json_file)
 
-    print(get_sufix(url=url, domain=domain_name))
-    create_html(url=url)
-    create_json(create_links(get_sufix(url, domain_name)))
+    for element in data:
+        print(f"[{element}] {data[element]['Title']}")
+
+# Finds the URL to the watch site from a given URL
+
+
+def find_watch_link(url):
+    create_html(url, "watch")
+    soup = get_soup("watch")
+    watch_url = "zoro.to" + str(soup.find("a", class_="btn-play").get("href"))
+    print(watch_url)
     try:
-        os.remove("pages/page.html")
+        os.remove("pages/watch.html")
     except Exception:
         print("file not found")
-    end = time.perf_counter()
-    print(f"Total Time: {end - start:0.4f} seconds")
+    return watch_url
+
+
+if __name__ == "__main__":
+    print("Search:")
+    search = input("> ")
+
+    create_html("zoro.to/search?keyword=" + search.replace(" ", "-"), "search")
+    create_json(find_shows(search, "search"), "search")
+
+    print_results("search")
+
+    print("Which one?")
+    selection = input("> ")
+
+    create_html(find_watch_link(
+        get_link_from_json(selection, "search")), "page")
+    create_json(find_links(), search.lower().replace(" ", "-"))
