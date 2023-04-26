@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import os
 import json
+import time
 
 URL = "https://9animetv.to/watch/one-piece-100?ep=2714"
 
@@ -18,6 +19,7 @@ def get_sufix(url, domain):
 
 
 def create_html(url):
+    start = time.perf_counter()
     print("Currently creating the rendered HTML.\nThis this can take a few seconds!")
     grab.URLToRenderedHTML(url)
 
@@ -25,7 +27,9 @@ def create_html(url):
         os.mkdir("pages")
     path = "./pages/page.html"
     grab.SaveTo(path)
+    end = time.perf_counter()
     print("Finished rendering the HTML")
+    print(f"It took: {end - start:0.4f} seconds")
 
 
 def create_json(dict):
