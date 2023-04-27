@@ -44,25 +44,41 @@ def find_shows(show_name, path):
         soup = BeautifulSoup(contents, "html.parser")
 
     search_results = {}
-    items = soup.find_all("a", class_="dynamic-name")
+    film_list = soup.find("div", class_="film_list")
+    items = film_list.find_all("a", class_="dynamic-name")
 
     show_count = 0
     for episode_item in items:
 
+        show_count += 1
         url = "zoro.to" + str(episode_item.get("href"))
         title = episode_item.get("title")
-
-        if show_name.lower().replace(" ", "") in title.lower().replace(" ", ""):
-            show_count += 1
-            search_results[show_count] = {
-                "Title": title,
-                "URL": url
-            }
+        search_results[show_count] = {
+            "Title": title,
+            "URL": url
+        }
     try:
         os.remove(f"pages/{path}.html")
     except Exception:
         print("file not found")
     return search_results
+
+def find_seasons(url):
+    create_html(url, "seasons")
+    
+    season_links = [] 
+
+    soup = get_soup("seasons")
+
+    season_block = soup.find("section", class_="block_area-seasons")
+
+    if season_block != None:
+        seasons = season_block.find_all("a", class_="os-item")
+    
+    for season in seasons:
+        if "Season" in season.find("div", class_="title").text:
+            season_links.append("zoro.to" + str(season.get("href")))
+    return season_links
 
 
 def find_links():
@@ -116,7 +132,6 @@ def find_watch_link(url):
     create_html(url, "watch")
     soup = get_soup("watch")
     watch_url = "zoro.to" + str(soup.find("a", class_="btn-play").get("href"))
-    print(watch_url)
     try:
         os.remove("pages/watch.html")
     except Exception:
@@ -129,13 +144,24 @@ if __name__ == "__main__":
     search = input("> ")
 
     create_html("zoro.to/search?keyword=" + search.replace(" ", "-"), "search")
-    create_json(find_shows(search, "search"), "search")
+    show_list = find_shows(search, "search")
+    
+    if len(show_list) > 0:
+        create_json(show_list, "search")
 
-    print_results("search")
+        print_results("search")
 
-    print("Which one?")
-    selection = input("> ")
+        print("Which one?")
+        selection = input("> ")
+        selected_show_url = get_link_from_json(selection, "search")
 
-    create_html(find_watch_link(
-        get_link_from_json(selection, "search")), "page")
-    create_json(find_links(), search.lower().replace(" ", "-"))
+        season_index = 0
+        show_dict = {}
+        for link in find_seasons(selected_show_url):
+            season_index += 1
+            create_html(find_watch_link(link), "page")
+            show_dict["Season " + str(season_index)] = find_links()
+
+        create_json(show_dict, search.lower().replace(" ", "-"))
+    else:
+        print("No shows were found! try again!")
