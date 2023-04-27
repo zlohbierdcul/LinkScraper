@@ -1,6 +1,7 @@
 from GrabzIt import GrabzItClient
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
+from threading import Thread
 import os
 import json
 
@@ -27,7 +28,7 @@ def get_link_from_json(selection, file_name):
 
 
 def create_html(url, name):
-    # print("Currently creating the rendered HTML.\nThis this can take a few seconds!")
+    print("Currently creating the rendered HTML.\nThis this can take a few seconds!")
     grab.URLToRenderedHTML(url)
 
     if not os.path.exists("pages"):
@@ -63,10 +64,11 @@ def find_shows(show_name, path):
         print("file not found")
     return search_results
 
+
 def find_seasons(url):
     create_html(url, "seasons")
-    
-    season_links = [] 
+
+    season_links = []
 
     soup = get_soup("seasons")
 
@@ -74,16 +76,16 @@ def find_seasons(url):
 
     if season_block != None:
         seasons = season_block.find_all("a", class_="os-item")
-    
+
     for season in seasons:
         if "Season" in season.find("div", class_="title").text:
             season_links.append("zoro.to" + str(season.get("href")))
     return season_links
 
 
-def find_links():
+def find_links(path):
     # print("Currently finding all Episodes!")
-    with open('./pages/page.html', 'rb') as page:
+    with open(f'./pages/{path}.html', 'rb') as page:
         contents = page.read()
         soup = BeautifulSoup(contents, "html.parser")
 
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 
     create_html("zoro.to/search?keyword=" + search.replace(" ", "-"), "search")
     show_list = find_shows(search, "search")
-    
+
     if len(show_list) > 0:
         create_json(show_list, "search")
 
@@ -157,10 +159,20 @@ if __name__ == "__main__":
 
         season_index = 0
         show_dict = {}
+        threads = []
         for link in find_seasons(selected_show_url):
             season_index += 1
-            create_html(find_watch_link(link), "page")
-            show_dict["Season " + str(season_index)] = find_links()
+            t = Thread(target=create_html, args=(
+                find_watch_link(link), f"page{season_index}"))
+            t.start()
+            threads.append(t)
+
+        season_index = 0
+        for thread in threads:
+            thread.join()
+            season_index += 1
+            show_dict["Season " + str(season_index)
+                      ] = find_links(f"page{season_index}")
 
         create_json(show_dict, search.lower().replace(" ", "-"))
     else:
