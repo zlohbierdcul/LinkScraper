@@ -70,15 +70,18 @@ def find_seasons(url):
 
     soup = get_soup("seasons")
 
-    season_block = soup.find("section", class_="block_area-seasons")
+    try:
+        season_block = soup.find("section", class_="block_area-seasons")
 
-    if season_block != None:
-        seasons = season_block.find_all("a", class_="os-item")
-    
-    for season in seasons:
-        if "Season" in season.find("div", class_="title").text:
-            season_links.append("zoro.to" + str(season.get("href")))
-    return season_links
+        if season_block != None:
+            seasons = season_block.find_all("a", class_="os-item")
+        
+        for season in seasons:
+            if "Season" in season.find("div", class_="title").text:
+                season_links.append("zoro.to" + str(season.get("href")))
+        return season_links
+    except Exception:
+        return None
 
 
 def find_links():
@@ -157,10 +160,16 @@ if __name__ == "__main__":
 
         season_index = 0
         show_dict = {}
-        for link in find_seasons(selected_show_url):
-            season_index += 1
-            create_html(find_watch_link(link), "page")
-            show_dict["Season " + str(season_index)] = find_links()
+        season_links = find_seasons(selected_show_url)
+
+        if season_links == None:
+            create_html(find_watch_link(selected_show_url), "page")
+            show_dict["Season 1"] = find_links()
+        else:
+            for link in season_links:
+                season_index += 1
+                create_html(find_watch_link(link), "page")
+                show_dict["Season " + str(season_index)] = find_links()
 
         create_json(show_dict, search.lower().replace(" ", "-"))
     else:
