@@ -66,7 +66,7 @@ def find_shows(show_name, path):
 def find_seasons(url):
     create_html(url, "seasons")
     
-    season_links = [] 
+    season_links = {} 
 
     soup = get_soup("seasons")
 
@@ -77,8 +77,7 @@ def find_seasons(url):
             seasons = season_block.find_all("a", class_="os-item")
         
         for season in seasons:
-            if "Season" in season.find("div", class_="title").text:
-                season_links.append("zoro.to" + str(season.get("href")))
+            season_links[season.find("div", class_="title").text] = "zoro.to" + str(season.get("href"))
         return season_links
     except Exception:
         return None
@@ -168,8 +167,8 @@ if __name__ == "__main__":
         else:
             for link in season_links:
                 season_index += 1
-                create_html(find_watch_link(link), "page")
-                show_dict["Season " + str(season_index)] = find_links()
+                create_html(find_watch_link(season_links.get(link)), "page")
+                show_dict[link] = find_links()
 
         create_json(show_dict, search.lower().replace(" ", "-"))
     else:
